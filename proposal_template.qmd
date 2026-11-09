@@ -1,0 +1,127 @@
+---
+title: "Why Was My Flight Delayed?"
+subtitle: "STAT 330 Portfolio Project Proposal"
+author: "Ryan Flynn, Ethan Hooley, Quinlin Haglund"
+format:
+  html:
+    theme: cosmo
+    toc: true
+    code-fold: true
+    code-summary: "Show code"
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+## Question and audience
+
+**State one focused regression question. Identify the intended audience, explain why the answer matters, and name the response and important candidate predictors.**
+
+We are interested in the contributing factors in flight delays. We want to be able to predict how delayed a flight will be upon arrival given the intended distance of the flight, the air time, the day of the week it leaves, its departure delay, the airline, how many flights flew that day, and whether or not it's coming from a major US city or hub. This is intended to be useful for anyone who flies, in order to tell their relatives when to plan on picking them up. We care because this model could inform airline and city pairing choices when booking flights, in order to minimize delays.
+
+## Data
+
+**Provide a working source link or citation. Describe the observational unit, dimensions, response, candidate predictors, collection process if known, and evidence that the data can answer your question. Address permission to share or retrieve the data and any privacy, representation, measurement, or ethical concern.**
+
+```{r}
+# Load packages and read the data with a relative path or reproducible step.
+# https://www.transtats.bts.gov/Fields.asp?P74_e19=-LM&P74_P1y=&n22yB_4n6r=&5146_p1y7z0=&frn4pu_Y11x72=&sv0q=&5146_14qr4=
+# Show only a compact check of dimensions and variables.
+library(tidyverse)
+direc <- getwd()
+setwd(direc)
+jan_flights <- read_csv("../STAT330_Portfolio_Project_Starter/T_ONTIME_REPORTING.csv")
+head(jan_flights)
+
+```
+
+## One useful first look
+
+```{r, fig.align = "center", fig.width = 10, fig.height = 15}
+# Create one figure that directly informs your research question.
+# Include a useful title, labels, units, and accessible colors.
+
+
+jan_flights |>
+  mutate(
+    DAY_OF_WEEK = factor(
+      DAY_OF_WEEK,
+      levels = 1:7,
+      labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    ),
+    Airline = case_match(
+      OP_UNIQUE_CARRIER,
+      "AA" ~ "American",
+      "AS" ~ "Alaska",
+      "B6" ~ "JetBlue",
+      "DL" ~ "Delta",
+      "F9" ~ "Frontier",
+      "G4" ~ "Allegiant",
+      "MQ" ~ "Envoy",
+      "NK" ~ "Spirit",
+      "OH" ~ "PSA",
+      "OO" ~ "SkyWest",
+      "UA" ~ "United",
+      "WN" ~ "Southwest",
+      "YX" ~ "Republic"
+    )
+  ) |>
+  summarize(
+    delay = mean(ARR_DELAY_NEW, na.rm = TRUE),
+    flights = sum(FLIGHTS),
+    .by = c(DAY_OF_WEEK, Airline)
+  ) |>
+  ggplot(mapping = aes(x = DAY_OF_WEEK, y = delay, group = 1, color = Airline)) +
+  geom_point(aes(size = flights)) + 
+  guides(color = "none") + 
+  geom_smooth(se = FALSE) + 
+  labs(title = "Average Flight Arrival Delay in January 2026 by Day of Week and Airline",
+  x = "Day of Week",
+  y = "Average Arrival Delay (minutes)", 
+  size = "Number of Flights") + 
+    
+  facet_wrap(~ Airline)
+
+
+```
+
+**In two to four sentences, explain the most important pattern. Do not make a causal claim unless the study design supports one.**
+
+>*It's clear that flying in the middle of the week is associated somewhat better/shorter delays than flying on the weekend, but it massively varies by airline. Also, the flight volume varies widly by airline, but there doesn't seem to be a consistent pattern in how delays and flight volumes are correlated. However, it's clear that the bigger airlines (American, Delta, SkyWest, Southwest, and United) have slightly more consistent on-time arrival performance then some of the other airlines (purely from an observational standpoint).*
+
+## Baseline model
+
+**Name and justify one simple starting model.**
+
+```{r}
+# Fit the baseline and display only the output needed below.
+jan_flights <- data.frame(jan_flights)
+jan_flights$OP_UNIQUE_CARRIER <- as.factor(jan_flights$OP_UNIQUE_CARRIER)
+jan_flights$DAY_OF_WEEK <- as.factor(jan_flights$DAY_OF_WEEK)
+jan_flights_model <- lm(formula = ARR_DELAY_NEW ~ DAY_OF_WEEK + DISTANCE + TAXI_IN + TAXI_OUT + DEP_DELAY_NEW + OP_UNIQUE_CARRIER, data = jan_flights)
+summary(jan_flights_model)
+```
+
+**Interpret one important coefficient, contrast, or prediction in context. Include direction, magnitude, units or scale, and uncertainty. Then identify one specific limitation, unexplained pattern, or opportunity for improvement.**
+
+>Well, we have a lot of super significant p-values, in part because we have 544,003 flights in our data set (although any cancelled or diverted flights are removed). So those are interesting, and we might have to use adjusted p-values in order to make meaningful inferential statements. Additionally, it's interesting to see the coefficients for the days of the week. Some days have huge (relatively) impacts on delays (in minutes), and they go both directions. As we saw in the first graph, there's definitely some association, but it varies widely by airline. One particularly interesting coefficient is that for distance. For every 1000 miles traveled, there is an associated change in arrival delay of -1.2 minutes, meaning that longer distances are associated with smaller arrival delays (SE = 2.04E-5).
+
+
+
+## Where the analysis could go
+
+**Choose two different course-method families from the project instructions. For each, state what you might do and how it could help answer the question. These methods will form the core of the project and may change after feedback.**
+
+1. **Log Transformations:** There's potential for performing log transformations specifially on the distance values, seeing as there are some really small distances and some really large distances. This will help us get a better feel for how flight distance affects the delay time.
+2. **Penalized Regression:** We have lots of factor levels and think that some of them might not be super valuable. Using penalized regression will allow us to simplify our model, making real life prediction much easier.
+3. **Cross Validation** We will be using cross validation along with best-subsets model building techniques to find the most accurate model (and simplest) model that we can. Because we have SO MUCH DATA, we'll be able to have lots and lots of training-test splits which should give us some really good model structures.
+
+## AI disclosure and sources
+
+**Disclose any AI used for debugging, proofreading, or other help with the proposal. This does not satisfy the required AI extension. Write “No AI used” if applicable. Cite the dataset and any other sources that materially informed the proposal.**
+
+
+AI (Claude) was used to debug a ggplot issue.
+
+Data source: USDOT: https://www.transtats.bts.gov/Fields.asp?P74_e19=-LM&P74_P1y=&n22yB_4n6r=&5146_p1y7z0=&frn4pu_Y11x72=&sv0q=&5146_14qr4=
