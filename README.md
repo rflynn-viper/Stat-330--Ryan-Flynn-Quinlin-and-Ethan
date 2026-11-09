@@ -5,3 +5,5 @@ We are interested in the contributing factors in flight delays. We want to be ab
 
 
 Our raw data is found at this Google Drive link: https://drive.google.com/file/d/1LJHEWCO3zwTH03Yp54UhPnlb5GYg4Glu/view?usp=sharing
+We obtained it from here:
+https://transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FGJ&QO_fu146_anzr=
